@@ -543,10 +543,10 @@
                     </div>
 
                     <div class="filter-group">
-                        <label for="homeownerRequirement">Homeowner Requirement</label>
+                        <label for="homeownerRequirement">Homeowner Required</label>
                         <div class="single-select" id="homeownerRequirementSelect">
                             <div class="single-select-display" onclick="toggleSingleSelect('homeownerRequirement')">
-                                <span class="single-select-placeholder">Select homeowner requirement...</span>
+                                <span class="single-select-placeholder">Select homeowner required...</span>
                             </div>
                             <div class="single-select-dropdown" id="homeownerRequirementDropdown">
                                 <div class="single-select-option" onclick="selectSingleOption('homeownerRequirement', 'yes')">Yes</div>
@@ -1042,7 +1042,7 @@
 
         function updateSingleSelectDisplay(type, value) {
             const display = document.querySelector(`#${type}Select .single-select-display`);
-            const placeholder = type === 'pgRequirement' ? 'Select PG required...' : 'Select homeowner requirement...';
+            const placeholder = type === 'pgRequirement' ? 'Select PG required...' : 'Select homeowner required...';
             
             if (!value) {
                 display.innerHTML = `<span class="single-select-placeholder">${placeholder}</span>`;
