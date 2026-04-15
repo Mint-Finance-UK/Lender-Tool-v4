@@ -328,12 +328,11 @@
             border-right: none;
         }
 
-        th:nth-child(1), td:nth-child(1) { width: 14% !important; }  /* Lender */
-        th:nth-child(2), td:nth-child(2) { width: 11% !important; }  /* Funding */
+        th:nth-child(1), td:nth-child(1) { width: 15% !important; }  /* Lender */
+        th:nth-child(2), td:nth-child(2) { width: 17% !important; }  /* Funding */
         th:nth-child(3), td:nth-child(3) { width: 16% !important; }  /* Security Required */
-        th:nth-child(4), td:nth-child(4) { width: 22% !important; }  /* Key Criteria */
-        th:nth-child(5), td:nth-child(5) { width: 15% !important; }  /* Key Documents */
-        th:nth-child(6), td:nth-child(6) { width: 22% !important; }  /* Product USP */
+        th:nth-child(4), td:nth-child(4) { width: 25% !important; }  /* Key Criteria */
+        th:nth-child(5), td:nth-child(5) { width: 27% !important; }  /* Product USP */
 
         th {
             background: #172c40;
@@ -389,18 +388,8 @@
         }
 
         .panel-indicator.mint-finance {
-            background-color: #172c40; /* Same blue as header */
-            color: #5affc4; /* Mint green color */
-        }
-
-        .panel-indicator.elite-money {
-            background-color: #ffd700; /* Gold color */
-            color: #172c40; /* Same blue as header */
-        }
-
-        .panel-indicator.mills-commercial {
-            background-color: #dc3545; /* Red background */
-            color: white; /* White text */
+            background-color: #172c40;
+            color: #5affc4;
         }
 
         .amount-range {
@@ -413,17 +402,22 @@
             font-weight: 600;
         }
 
-        .criteria-list, .documents-list, .security-required-list, .usp-list {
+        .interest-range {
+            color: #6f42c1;
+            font-weight: 600;
+        }
+
+        .criteria-list, .security-required-list, .usp-list {
             list-style: none;
             padding: 0;
         }
 
-        .criteria-list li, .documents-list li, .security-required-list li, .usp-list li {
+        .criteria-list li, .security-required-list li, .usp-list li {
             padding: 0.125rem 0;
             font-size: 0.85rem;
         }
 
-        .criteria-list li:before, .documents-list li:before, .security-required-list li:before, .usp-list li:before {
+        .criteria-list li:before, .security-required-list li:before, .usp-list li:before {
             content: "• ";
             color: #172c40;
             font-weight: bold;
@@ -536,16 +530,6 @@
                     </div>
 
                     <div class="filter-group">
-                        <label for="companyType">Company Type</label>
-                        <div class="multi-select" id="companyTypeSelect">
-                            <div class="multi-select-display" onclick="toggleMultiSelect('companyType')">
-                                <span class="multi-select-placeholder">Select company type...</span>
-                            </div>
-                            <div class="multi-select-dropdown" id="companyTypeDropdown"></div>
-                        </div>
-                    </div>
-
-                    <div class="filter-group">
                         <label for="location">Company Location</label>
                         <div class="multi-select" id="locationSelect">
                             <div class="multi-select-display" onclick="toggleMultiSelect('location')">
@@ -595,7 +579,6 @@
                         <th>Funding</th>
                         <th>Security Required</th>
                         <th>Key Criteria</th>
-                        <th>Key Documents</th>
                         <th>Product USP</th>
                     </tr>
                 </thead>
@@ -614,34 +597,28 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <script>
-        // Add this to your HTML head for cache busting and version control
-        const DATA_VERSION = '1.0'; // Update this when you change the CSV
+        const DATA_VERSION = '3.0';
 
-        // Global variables for loaded data
         let csvData = [];
         let lenderData = [];
         let filteredData = [];
         let selectedLenders = [];
-        let selectedCompanyTypes = [];
         let selectedProductTypes = [];
         let selectedLocations = [];
         let allLenders = [];
-        let allCompanyTypes = [];
         let allProductTypes = [];
         let allLocations = [];
         let selectedPgRequirement = '';
         let selectedHomeownerRequirement = '';
         let domElements = {};
 
-        // Data validation function
         function validateCSVData(csvRows) {
             const errors = [];
             const warnings = [];
             
             csvRows.forEach((row, index) => {
-                const rowNum = index + 2; // +2 because CSV is 1-indexed and we skip header
+                const rowNum = index + 2;
                 
-                // Required fields validation
                 if (!row['Lender'] || row['Lender'].trim() === '') {
                     errors.push(`Row ${rowNum}: Lender name is required`);
                 }
@@ -650,8 +627,7 @@
                     warnings.push(`Row ${rowNum}: Product Type is missing`);
                 }
                 
-                // Numeric field validation
-                const numericFields = ['Min Loan', 'Max Loan', 'Min Term', 'Max Term', 'Min Trading Months', 'Min Monthly Turnover'];
+                const numericFields = ['Min Loan', 'Max Loan', 'Min Term', 'Max Term', 'Min Trading Months', 'Min Monthly Turnover', 'Monthly Interest From', 'Monthly Interest To'];
                 numericFields.forEach(field => {
                     const value = row[field];
                     if (value !== '' && value !== null && value !== undefined) {
@@ -662,7 +638,6 @@
                     }
                 });
                 
-                // Logical validation
                 const minLoan = Number(row['Min Loan']) || 0;
                 const maxLoan = Number(row['Max Loan']) || 0;
                 if (minLoan > 0 && maxLoan > 0 && minLoan > maxLoan) {
@@ -675,8 +650,7 @@
                     errors.push(`Row ${rowNum}: Min Term (${minTerm}) cannot be greater than Max Term (${maxTerm})`);
                 }
                 
-                // Boolean field validation
-                const booleanFields = ['Homeowner Required', 'Existing Lending Required', 'Mint Finance Panel', 'Elite Money Panel'];
+                const booleanFields = ['Homeowner Required', 'Existing Lending Required', 'Mint Finance Panel'];
                 booleanFields.forEach(field => {
                     const value = row[field];
                     if (value && !['Yes', 'No', 'TRUE', 'FALSE', true, false, ''].includes(value)) {
@@ -684,17 +658,6 @@
                     }
                 });
                 
-                // Mills Commercial Finance Panel validation (can be boolean or float)
-                const millsPanel = row['Mills Commercial Finance Panel'];
-                if (millsPanel && millsPanel !== '' && millsPanel !== null && millsPanel !== undefined) {
-                    const numValue = Number(millsPanel);
-                    const boolValue = ['Yes', 'No', 'TRUE', 'FALSE', true, false].includes(millsPanel);
-                    if (isNaN(numValue) && !boolValue) {
-                        errors.push(`Row ${rowNum}: Mills Commercial Finance Panel must be a number or boolean (found: "${millsPanel}")`);
-                    }
-                }
-                
-                // URL validation for submission links
                 const submission = row['Submission'];
                 if (submission && submission.trim() !== '') {
                     const trimmedSubmission = submission.trim();
@@ -707,13 +670,10 @@
             return { errors, warnings };
         }
 
-        // Function to load and parse CSV data
         async function loadLenderDataFromCSV() {
             try {
-                // Show loading indicator
                 showLoadingState();
                 
-                // Fetch CSV file with cache busting
                 const response = await fetch(`Lender-Data.csv?v=${DATA_VERSION}&t=${Date.now()}`);
                 
                 if (!response.ok) {
@@ -722,14 +682,13 @@
                 
                 const csvText = await response.text();
                 
-                // Parse CSV using Papa Parse
                 const parsed = Papa.parse(csvText, {
                     header: true,
                     skipEmptyLines: true,
                     trimHeaders: true,
-                    dynamicTyping: true, // Automatically convert numbers
+                    dynamicTyping: true,
                     transformHeader: function(header) {
-                        return header.trim(); // Clean up any whitespace
+                        return header.trim();
                     }
                 });
                 
@@ -737,18 +696,12 @@
                     console.warn('CSV parsing warnings:', parsed.errors);
                 }
                 
-                // Convert CSV data to internal format
                 csvData = parsed.data;
                 lenderData = convertCSVToInternalFormat(csvData);
                 filteredData = [...lenderData];
                 
-                // Extract unique values for filters
                 parseData();
-                
-                // Hide loading and show main content
                 hideLoadingState();
-                
-                // Initialize the application
                 initializeFilters();
                 renderResults();
                 
@@ -760,9 +713,7 @@
             }
         }
 
-        // Convert CSV rows to your internal data structure
         function convertCSVToInternalFormat(csvRows) {
-            // Validate data first
             const validation = validateCSVData(csvRows);
             
             if (validation.errors.length > 0) {
@@ -776,26 +727,16 @@
             
             return csvRows.map((row, index) => {
                 try {
-                    // Handle potential data type issues with proper validation
                     const minLoan = Math.max(0, parseInt(row['Min Loan']) || 0);
                     const maxLoan = Math.max(0, parseInt(row['Max Loan']) || 0);
                     const minTerm = Math.max(0, parseInt(row['Min Term']) || 0);
                     const maxTerm = Math.max(0, parseInt(row['Max Term']) || 0);
                     const minTrading = Math.max(0, parseInt(row['Min Trading Months']) || 0);
                     const minTurnover = Math.max(0, parseInt(row['Min Monthly Turnover']) || 0);
+                    const interestFrom = parseFloat(row['Monthly Interest From']) || 0;
+                    const interestTo = parseFloat(row['Monthly Interest To']) || 0;
                     
-                    // Convert boolean strings to actual booleans
                     const mintFinancePanel = (row['Mint Finance Panel'] === 'TRUE' || row['Mint Finance Panel'] === true);
-                    const eliteMoneyPanel = (row['Elite Money Panel'] === 'TRUE' || row['Elite Money Panel'] === true);
-                    
-                    // Handle Mills Commercial Finance Panel (can be boolean or float)
-                    let millsPanel = false;
-                    const millsPanelValue = row['Mills Commercial Finance Panel'];
-                    if (millsPanelValue === 'TRUE' || millsPanelValue === true || millsPanelValue === 'Yes') {
-                        millsPanel = true;
-                    } else if (!isNaN(Number(millsPanelValue)) && Number(millsPanelValue) > 0) {
-                        millsPanel = true;
-                    }
                     
                     return {
                         LENDER: (row['Lender'] || '').toString().trim(),
@@ -804,29 +745,19 @@
                         MAX_LOAN: `£${maxLoan.toLocaleString()}.00`,
                         MIN_TERM: minTerm,
                         MAX_TERM: maxTerm,
-                        COMPANY_TYPE: (row['Company Type'] || '').toString().trim(),
+                        MONTHLY_INTEREST_FROM: interestFrom,
+                        MONTHLY_INTEREST_TO: interestTo,
                         MIN_TRADING_TIME: minTrading,
                         MIN_TURNOVER: minTurnover,
                         HOMEOWNER_STATUS: (row['Homeowner Required'] || '').toString().trim(),
                         EXISTING_LENDING: (row['Existing Lending Required'] || '').toString().trim(),
                         PG_REQ: (row['PG Required'] || '').toString().trim(),
-                        DEBENTURE_REQ: (row['Debenture Required'] || '').toString().trim(),
                         OTHER_SECURITY: (row['Other Security'] || '').toString().trim(),
-                        OPEN_BANKING: (row['Open Banking'] || '').toString().trim(),
-                        BANK_STATEMENTS: (row['Bank Statements'] || '').toString().trim(),
-                        FILED_ACCOUNTS: (row['Filed Accounts'] || '').toString().trim(),
-                        MANAGEMENT_ACCOUNTS: (row['Management Accounts'] || '').toString().trim(),
-                        AGED_DEBTOR: (row['Aged Debtor'] || '').toString().trim(),
-                        AGED_CREDITOR: (row['Aged Creditor'] || '').toString().trim(),
-                        OTHER_DOCUMENTS: (row['Other Documents'] || '').toString().trim(),
                         LOCATION: (row['Location'] || '').toString().trim(),
                         ADDITIONAL_CRITERIA: (row['Additional Criteria'] || '').toString().trim(),
                         PRODUCT_USP: (row['Product USP'] || '').toString().trim(),
                         SUBMISSION: (row['Submission'] || '').toString().trim(),
                         MINT_FINANCE_PANEL: mintFinancePanel,
-                        ELITE_MONEY_PANEL: eliteMoneyPanel,
-                        MILLS_PANEL: millsPanel,
-                        // Computed fields for filtering
                         MIN_LOAN_NUM: minLoan,
                         MAX_LOAN_NUM: maxLoan,
                         MIN_MONTHLY_TURNOVER: minTurnover
@@ -835,10 +766,9 @@
                     console.error(`Error processing row ${index + 1}:`, error, row);
                     return null;
                 }
-            }).filter(item => item !== null && item.LENDER); // Remove invalid rows
+            }).filter(item => item !== null && item.LENDER);
         }
 
-        // Loading state management
         function showLoadingState() {
             const loadingHtml = `
                 <div id="loadingIndicator" style="
@@ -860,15 +790,12 @@
                     </div>
                 </div>
             `;
-            
             document.body.insertAdjacentHTML('beforeend', loadingHtml);
         }
 
         function hideLoadingState() {
             const indicator = document.getElementById('loadingIndicator');
-            if (indicator) {
-                indicator.remove();
-            }
+            if (indicator) indicator.remove();
         }
 
         function showErrorState(errorMessage) {
@@ -901,10 +828,8 @@
             }
         }
 
-        // Initialize Application
         document.addEventListener('DOMContentLoaded', function() {
             try {
-                // Cache DOM elements first
                 domElements = {
                     loanAmount: document.getElementById('loanAmount'),
                     termMonths: document.getElementById('termMonths'),
@@ -913,31 +838,21 @@
                     headerResultsSummary: document.getElementById('headerResultsSummary'),
                     resultsTableBody: document.getElementById('resultsTableBody')
                 };
-
-                // Load data from CSV instead of embedded data
                 loadLenderDataFromCSV();
-                
             } catch (error) {
                 console.error('Initialization error:', error);
                 showErrorState('Failed to initialize application');
             }
         });
 
-        // Parse and prepare data
         function parseData() {
             const lenderSet = new Set();
-            const companyTypeSet = new Set();
             const productTypeSet = new Set();
             const locationSet = new Set();
             
             lenderData.forEach(lender => {
                 if (lender.LENDER && lender.LENDER.trim() !== '') {
                     lenderSet.add(lender.LENDER.trim());
-                }
-                
-                if (lender.COMPANY_TYPE && lender.COMPANY_TYPE.trim() !== '') {
-                    const types = lender.COMPANY_TYPE.split(', ');
-                    types.forEach(type => companyTypeSet.add(type.trim()));
                 }
                 
                 if (lender.PRODUCT_TYPE && lender.PRODUCT_TYPE.trim() !== '') {
@@ -952,11 +867,9 @@
             });
 
             allLenders = Array.from(lenderSet).filter(lender => lender !== '').sort();
-            allCompanyTypes = Array.from(companyTypeSet).filter(type => type !== '').sort();
             allProductTypes = Array.from(productTypeSet).filter(type => type !== '').sort();
             allLocations = Array.from(locationSet).filter(location => location !== '').sort();
 
-            // Sort lender data safely
             lenderData.sort((a, b) => {
                 const nameA = a.LENDER || '';
                 const nameB = b.LENDER || '';
@@ -984,14 +897,12 @@
             return div.innerHTML;
         }
 
-        // Initialize filter components
         function initializeFilters() {
             setupMultiSelects();
             setupFilterListeners();
         }
 
         function setupMultiSelects() {
-            // Lenders
             const lenderDropdown = document.getElementById('lenderDropdown');
             if (lenderDropdown) {
                 lenderDropdown.innerHTML = allLenders
@@ -1003,19 +914,6 @@
                     `).join('');
             }
 
-            // Company Types
-            const companyDropdown = document.getElementById('companyTypeDropdown');
-            if (companyDropdown) {
-                companyDropdown.innerHTML = allCompanyTypes
-                    .map(type => `
-                        <div class="multi-select-option" onclick="event.stopPropagation(); toggleCompanyType('${escapeHtml(type)}')">
-                            <input type="checkbox" id="companyType_${type.replace(/\s+/g, '_').replace(/,/g, '')}" onchange="event.stopPropagation(); toggleCompanyType('${escapeHtml(type)}')">
-                            <label for="companyType_${type.replace(/\s+/g, '_').replace(/,/g, '')}">${escapeHtml(type)}</label>
-                        </div>
-                    `).join('');
-            }
-
-            // Product Types
             const productDropdown = document.getElementById('productTypeDropdown');
             if (productDropdown) {
                 productDropdown.innerHTML = allProductTypes
@@ -1027,7 +925,6 @@
                     `).join('');
             }
 
-            // Locations
             const locationDropdown = document.getElementById('locationDropdown');
             if (locationDropdown) {
                 locationDropdown.innerHTML = allLocations
@@ -1039,7 +936,6 @@
                     `).join('');
             }
 
-            // Add event listeners for dropdown management
             document.addEventListener('click', function(e) {
                 document.querySelectorAll('.multi-select').forEach(multiSelect => {
                     if (!multiSelect.contains(e.target)) {
@@ -1068,7 +964,6 @@
             });
         }
 
-        // Interactive Functions
         function toggleLender(lender) {
             const checkbox = document.getElementById(`lender_${lender.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')}`);
             
@@ -1089,13 +984,11 @@
             const multiSelect = document.getElementById(type + 'Select');
             const isVisible = dropdown.classList.contains('show');
             
-            // Hide all other dropdowns
             document.querySelectorAll('.multi-select-dropdown').forEach(d => d.classList.remove('show'));
             document.querySelectorAll('.multi-select').forEach(ms => ms.classList.remove('open'));
             document.querySelectorAll('.single-select-dropdown').forEach(d => d.classList.remove('show'));
             document.querySelectorAll('.single-select').forEach(ss => ss.classList.remove('open'));
             
-            // Toggle this dropdown
             if (!isVisible) {
                 dropdown.classList.add('show');
                 multiSelect.classList.add('open');
@@ -1107,32 +1000,15 @@
             const singleSelect = document.getElementById(type + 'Select');
             const isVisible = dropdown.classList.contains('show');
             
-            // Hide all other dropdowns
             document.querySelectorAll('.multi-select-dropdown').forEach(d => d.classList.remove('show'));
             document.querySelectorAll('.multi-select').forEach(ms => ms.classList.remove('open'));
             document.querySelectorAll('.single-select-dropdown').forEach(d => d.classList.remove('show'));
             document.querySelectorAll('.single-select').forEach(ss => ss.classList.remove('open'));
             
-            // Toggle this dropdown
             if (!isVisible) {
                 dropdown.classList.add('show');
                 singleSelect.classList.add('open');
             }
-        }
-
-        function toggleCompanyType(type) {
-            const checkbox = document.getElementById(`companyType_${type.replace(/\s+/g, '_').replace(/,/g, '')}`);
-            
-            if (selectedCompanyTypes.includes(type)) {
-                selectedCompanyTypes = selectedCompanyTypes.filter(t => t !== type);
-                if (checkbox) checkbox.checked = false;
-            } else {
-                selectedCompanyTypes.push(type);
-                if (checkbox) checkbox.checked = true;
-            }
-            
-            updateMultiSelectDisplay('companyType', selectedCompanyTypes);
-            applyFilters();
         }
 
         function toggleProductType(type) {
@@ -1174,7 +1050,6 @@
                 updateSingleSelectDisplay('homeownerRequirement', value);
             }
             
-            // Hide dropdown
             const dropdown = document.getElementById(type + 'Dropdown');
             const singleSelect = document.getElementById(type + 'Select');
             dropdown.classList.remove('show');
@@ -1186,7 +1061,6 @@
         function updateMultiSelectDisplay(type, selectedItems) {
             const display = document.querySelector(`#${type}Select .multi-select-display`);
             const placeholder = type === 'lender' ? 'Select lender...' :
-                              type === 'companyType' ? 'Select company type...' : 
                               type === 'productType' ? 'Select product type...' : 
                               'Select location...';
             
@@ -1197,7 +1071,7 @@
                     .map(item => `
                         <span class="multi-select-tag">
                             ${escapeHtml(item)}
-                            <span class="remove" onclick="toggle${type === 'lender' ? 'Lender' : type === 'companyType' ? 'CompanyType' : type === 'productType' ? 'ProductType' : 'Location'}('${escapeHtml(item)}')">&times;</span>
+                            <span class="remove" onclick="toggle${type === 'lender' ? 'Lender' : type === 'productType' ? 'ProductType' : 'Location'}('${escapeHtml(item)}')">&times;</span>
                         </span>
                     `).join('');
             }
@@ -1221,25 +1095,21 @@
             if (domElements.monthlyTurnover) domElements.monthlyTurnover.value = '';
             
             selectedLenders = [];
-            selectedCompanyTypes = [];
             selectedProductTypes = [];
             selectedLocations = [];
             selectedPgRequirement = '';
             selectedHomeownerRequirement = '';
             
             updateMultiSelectDisplay('lender', selectedLenders);
-            updateMultiSelectDisplay('companyType', selectedCompanyTypes);
             updateMultiSelectDisplay('productType', selectedProductTypes);
             updateMultiSelectDisplay('location', selectedLocations);
             updateSingleSelectDisplay('pgRequirement', '');
             updateSingleSelectDisplay('homeownerRequirement', '');
             
-            // Clear all checkboxes
             document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
                 checkbox.checked = false;
             });
             
-            // Hide any open dropdowns
             document.querySelectorAll('.multi-select-dropdown').forEach(d => d.classList.remove('show'));
             document.querySelectorAll('.multi-select').forEach(ms => ms.classList.remove('open'));
             document.querySelectorAll('.single-select-dropdown').forEach(d => d.classList.remove('show'));
@@ -1248,7 +1118,6 @@
             applyFilters();
         }
 
-        // Filter Logic
         function applyFilters() {
             try {
                 const loanAmount = parseFloat(domElements.loanAmount?.value) || null;
@@ -1257,22 +1126,12 @@
                 const monthlyTurnover = parseFloat(domElements.monthlyTurnover?.value) || null;
 
                 filteredData = lenderData.filter(lender => {
-                    // Lender filter
                     if (selectedLenders.length > 0 && !selectedLenders.includes(lender.LENDER)) return false;
-                    
-                    // Loan amount filter
                     if (loanAmount && (loanAmount < lender.MIN_LOAN_NUM || (lender.MAX_LOAN_NUM > 0 && loanAmount > lender.MAX_LOAN_NUM))) return false;
-                    
-                    // Term filter
                     if (termMonths && (termMonths < lender.MIN_TERM || (lender.MAX_TERM > 0 && termMonths > lender.MAX_TERM))) return false;
-                    
-                    // Trading time filter
                     if (tradingTime && tradingTime < lender.MIN_TRADING_TIME) return false;
-                    
-                    // Monthly turnover filter
                     if (monthlyTurnover && lender.MIN_TURNOVER && monthlyTurnover < lender.MIN_MONTHLY_TURNOVER) return false;
                     
-                    // Product type filter
                     if (selectedProductTypes.length > 0 && lender.PRODUCT_TYPE && lender.PRODUCT_TYPE.trim() !== '') {
                         const lenderProductTypes = lender.PRODUCT_TYPE.split(', ').map(t => t.trim());
                         const hasMatchingProduct = selectedProductTypes.some(selectedType => 
@@ -1281,16 +1140,6 @@
                         if (!hasMatchingProduct) return false;
                     }
                     
-                    // Company type filter
-                    if (selectedCompanyTypes.length > 0 && lender.COMPANY_TYPE && lender.COMPANY_TYPE.trim() !== '') {
-                        const lenderTypes = lender.COMPANY_TYPE.split(', ').map(t => t.trim());
-                        const hasMatchingType = selectedCompanyTypes.some(selectedType => 
-                            lenderTypes.includes(selectedType)
-                        );
-                        if (!hasMatchingType) return false;
-                    }
-                    
-                    // Location filter
                     if (selectedLocations.length > 0 && lender.LOCATION && lender.LOCATION.trim() !== '') {
                         const lenderLocations = lender.LOCATION.split(', ').map(l => l.trim());
                         const hasMatchingLocation = selectedLocations.some(selectedLocation => 
@@ -1299,14 +1148,12 @@
                         if (!hasMatchingLocation) return false;
                     }
                     
-                    // PG requirement filter
                     if (selectedPgRequirement) {
                         const lenderPgReq = lender.PG_REQ ? lender.PG_REQ.toLowerCase() : '';
                         if (selectedPgRequirement === 'yes' && lenderPgReq !== 'yes') return false;
                         if (selectedPgRequirement === 'no' && lenderPgReq !== 'no') return false;
                     }
                     
-                    // Homeowner requirement filter
                     if (selectedHomeownerRequirement) {
                         const lenderHomeowner = lender.HOMEOWNER_STATUS ? lender.HOMEOWNER_STATUS.toLowerCase() : '';
                         if (selectedHomeownerRequirement === 'yes' && lenderHomeowner !== 'yes') return false;
@@ -1322,7 +1169,6 @@
             }
         }
 
-        // Rendering Functions
         function renderResults() {
             updateResultsSummary();
             renderTable();
@@ -1341,7 +1187,7 @@
                 if (filteredData.length === 0) {
                     domElements.resultsTableBody.innerHTML = `
                         <tr>
-                            <td colspan="6" class="no-results">
+                            <td colspan="5" class="no-results">
                                 <h3>No lenders match your criteria</h3>
                                 <p>Try adjusting your filters to see more results</p>
                             </td>
@@ -1350,7 +1196,6 @@
                     return;
                 }
 
-                // Sort filtered data alphabetically by lender name before rendering
                 const sortedData = [...filteredData].sort((a, b) => {
                     const nameA = (a.LENDER || '').trim();
                     const nameB = (b.LENDER || '').trim();
@@ -1366,6 +1211,18 @@
                         `${lender.MIN_TERM} - ${lender.MAX_TERM} months` : 
                         'Not specified';
                     
+                    // Monthly interest rate display
+                    let interestDisplay = '';
+                    if (lender.MONTHLY_INTEREST_FROM > 0 || lender.MONTHLY_INTEREST_TO > 0) {
+                        if (lender.MONTHLY_INTEREST_FROM > 0 && lender.MONTHLY_INTEREST_TO > 0) {
+                            interestDisplay = `${lender.MONTHLY_INTEREST_FROM}% - ${lender.MONTHLY_INTEREST_TO}% monthly`;
+                        } else if (lender.MONTHLY_INTEREST_FROM > 0) {
+                            interestDisplay = `From ${lender.MONTHLY_INTEREST_FROM}% monthly`;
+                        } else {
+                            interestDisplay = `Up to ${lender.MONTHLY_INTEREST_TO}% monthly`;
+                        }
+                    }
+                    
                     const productBadge = lender.PRODUCT_TYPE && lender.PRODUCT_TYPE.trim() !== '' ? 
                         `<span class="product-badge">${escapeHtml(lender.PRODUCT_TYPE.trim())}</span>` :
                         'Not specified';
@@ -1376,16 +1233,10 @@
                             `<a href="${escapeHtml(lender.SUBMISSION)}" target="_blank" class="submission-link">Portal</a>`) :
                         'Not specified';
                     
-                    // Panel indicators with new Mills Commercial Finance panel
+                    // Panel indicators - Mint Finance only
                     const panelIndicators = [];
                     if (lender.MINT_FINANCE_PANEL) {
                         panelIndicators.push('<div class="panel-indicator mint-finance" title="Mint Finance Panel">MF</div>');
-                    }
-                    if (lender.ELITE_MONEY_PANEL) {
-                        panelIndicators.push('<div class="panel-indicator elite-money" title="Elite Money Panel">EM</div>');
-                    }
-                    if (lender.MILLS_PANEL) {
-                        panelIndicators.push('<div class="panel-indicator mills-commercial" title="Mills Commercial Finance Panel">MC</div>');
                     }
                     const panelIndicatorsHtml = panelIndicators.length > 0 ? 
                         `<div class="panel-indicators">${panelIndicators.join('')}</div>` : '';
@@ -1394,7 +1245,6 @@
                     if (lender.MIN_TRADING_TIME > 0) criteriaItems.push(`Min Trading: ${lender.MIN_TRADING_TIME} months`);
                     if (lender.MIN_TURNOVER > 0) criteriaItems.push(`Min Turnover: ${formatCurrency(lender.MIN_TURNOVER)}/month`);
                     if (lender.LOCATION && lender.LOCATION.trim() !== '') {
-                        // Shorten location display to save space
                         const shortLocation = lender.LOCATION
                             .replace('England', 'Eng')
                             .replace('Scotland', 'Scot')
@@ -1408,50 +1258,12 @@
                         ).filter(c => c.length > 0));
                     }
                     
-                    // Document items in specified order
-                    const documentItems = [];
-                    
-                    // 1. Open Banking
-                    if (lender.OPEN_BANKING && lender.OPEN_BANKING.trim() !== '' && lender.OPEN_BANKING.toLowerCase() !== 'no') {
-                        documentItems.push(`Open Banking: ${escapeHtml(lender.OPEN_BANKING)}`);
-                    }
-                    
-                    // 2. Bank Statements
-                    if (lender.BANK_STATEMENTS && lender.BANK_STATEMENTS.trim() !== '' && lender.BANK_STATEMENTS.toLowerCase() !== 'none') {
-                        documentItems.push(`Bank Statements: ${escapeHtml(lender.BANK_STATEMENTS)}`);
-                    }
-                    
-                    // 3. Filed Accounts
-                    if (lender.FILED_ACCOUNTS && lender.FILED_ACCOUNTS.trim() !== '' && lender.FILED_ACCOUNTS.toLowerCase() !== 'no') {
-                        documentItems.push(`Filed Accounts: ${escapeHtml(lender.FILED_ACCOUNTS)}`);
-                    }
-                    
-                    // 4. Management Accounts
-                    if (lender.MANAGEMENT_ACCOUNTS && lender.MANAGEMENT_ACCOUNTS.trim() !== '') {
-                        documentItems.push(`Management Accounts: ${escapeHtml(lender.MANAGEMENT_ACCOUNTS)}`);
-                    }
-                    
-                    // 5. Aged Debtor
-                    if (lender.AGED_DEBTOR && lender.AGED_DEBTOR.trim() !== '') {
-                        documentItems.push(`Aged Debtor: ${escapeHtml(lender.AGED_DEBTOR)}`);
-                    }
-                    
-                    // 6. Aged Creditor
-                    if (lender.AGED_CREDITOR && lender.AGED_CREDITOR.trim() !== '') {
-                        documentItems.push(`Aged Creditor: ${escapeHtml(lender.AGED_CREDITOR)}`);
-                    }
-                    
-                    // 7. Other Documents
-                    if (lender.OTHER_DOCUMENTS && lender.OTHER_DOCUMENTS.trim() !== '') {
-                        documentItems.push(`Other: ${escapeHtml(lender.OTHER_DOCUMENTS)}`);
-                    }
-                    
                     const securityItems = [];
                     if (lender.PG_REQ && lender.PG_REQ.trim() !== '') securityItems.push(`PG Required: ${escapeHtml(lender.PG_REQ)}`);
                     if (lender.HOMEOWNER_STATUS && lender.HOMEOWNER_STATUS.trim() !== '') securityItems.push(`Homeowner Required: ${escapeHtml(lender.HOMEOWNER_STATUS)}`);
-                    if (lender.DEBENTURE_REQ && lender.DEBENTURE_REQ.trim() !== '') securityItems.push(`Debenture Required: ${escapeHtml(lender.DEBENTURE_REQ)}`);
                     if (lender.OTHER_SECURITY && lender.OTHER_SECURITY.trim() !== '') securityItems.push(`Other Security: ${escapeHtml(lender.OTHER_SECURITY)}`);
                     
+                    // USP items from Product USP field
                     const uspItems = lender.PRODUCT_USP && lender.PRODUCT_USP.trim() !== '' ? 
                         lender.PRODUCT_USP.split(',').slice(0, 3).map(usp => 
                             escapeHtml(usp.trim())
@@ -1476,6 +1288,7 @@
                                 <div class="term-range" style="margin-top: 0.25rem;">
                                     ${termRange}
                                 </div>
+                                ${interestDisplay ? `<div class="interest-range" style="margin-top: 0.25rem;">${interestDisplay}</div>` : ''}
                             </td>
                             <td>
                                 ${securityItems.length > 0 ? 
@@ -1485,11 +1298,6 @@
                             <td>
                                 ${criteriaItems.length > 0 ? 
                                     `<ul class="criteria-list">${criteriaItems.map(item => `<li>${item}</li>`).join('')}</ul>` : 
-                                    'Not specified'}
-                            </td>
-                            <td>
-                                ${documentItems.length > 0 ? 
-                                    `<ul class="documents-list">${documentItems.map(item => `<li>${item}</li>`).join('')}</ul>` : 
                                     'Not specified'}
                             </td>
                             <td>
@@ -1505,7 +1313,7 @@
                 if (domElements.resultsTableBody) {
                     domElements.resultsTableBody.innerHTML = `
                         <tr>
-                            <td colspan="6" class="no-results">
+                            <td colspan="5" class="no-results">
                                 <h3>Error displaying results</h3>
                                 <p>Please try refreshing the page</p>
                             </td>
@@ -1515,7 +1323,6 @@
             }
         }
 
-        // Optional: Add a manual refresh function for updates
         function refreshLenderData() {
             console.log('Refreshing lender data...');
             loadLenderDataFromCSV();
