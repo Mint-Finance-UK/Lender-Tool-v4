@@ -1094,8 +1094,8 @@
                     if (selectedLenders.length > 0 && !selectedLenders.includes(lender.LENDER)) return false;
                     if (loanAmount !== null && (loanAmount < lender.MIN_LOAN_NUM || (lender.MAX_LOAN_NUM > 0 && loanAmount > lender.MAX_LOAN_NUM))) return false;
                     if (termMonths !== null && (termMonths < lender.MIN_TERM || (lender.MAX_TERM > 0 && termMonths > lender.MAX_TERM))) return false;
-                    if (tradingTime !== null && tradingTime < lender.MIN_TRADING_TIME) return false;
-                    if (monthlyTurnover !== null && lender.MIN_TURNOVER && monthlyTurnover < lender.MIN_MONTHLY_TURNOVER) return false;
+                    if (tradingTime !== null && (lender.MIN_TRADING_IS_BLANK || tradingTime < lender.MIN_TRADING_TIME)) return false;
+                    if (monthlyTurnover !== null && (lender.MIN_TURNOVER_IS_BLANK || monthlyTurnover < lender.MIN_MONTHLY_TURNOVER)) return false;
                     
                     if (selectedProductTypes.length > 0 && lender.PRODUCT_TYPE && lender.PRODUCT_TYPE.trim() !== '') {
                         const lenderProductTypes = lender.PRODUCT_TYPE.split(', ').map(t => t.trim());
