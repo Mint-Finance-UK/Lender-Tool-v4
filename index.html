@@ -529,15 +529,7 @@
                         </div>
                     </div>
 
-                    <div class="filter-group">
-                        <label for="location">Company Location</label>
-                        <div class="multi-select" id="locationSelect">
-                            <div class="multi-select-display" onclick="toggleMultiSelect('location')">
-                                <span class="multi-select-placeholder">Select location...</span>
-                            </div>
-                            <div class="multi-select-dropdown" id="locationDropdown"></div>
-                        </div>
-                    </div>
+
 
                     <div class="filter-group">
                         <label for="pgRequirement">PG Required</label>
@@ -604,10 +596,8 @@
         let filteredData = [];
         let selectedLenders = [];
         let selectedProductTypes = [];
-        let selectedLocations = [];
         let allLenders = [];
         let allProductTypes = [];
-        let allLocations = [];
         let selectedPgRequirement = '';
         let selectedHomeownerRequirement = '';
         let domElements = {};
@@ -848,7 +838,6 @@
         function parseData() {
             const lenderSet = new Set();
             const productTypeSet = new Set();
-            const locationSet = new Set();
             
             lenderData.forEach(lender => {
                 if (lender.LENDER && lender.LENDER.trim() !== '') {
@@ -859,16 +848,10 @@
                     const types = lender.PRODUCT_TYPE.split(', ');
                     types.forEach(type => productTypeSet.add(type.trim()));
                 }
-                
-                if (lender.LOCATION && lender.LOCATION.trim() !== '') {
-                    const locations = lender.LOCATION.split(', ');
-                    locations.forEach(location => locationSet.add(location.trim()));
-                }
             });
 
             allLenders = Array.from(lenderSet).filter(lender => lender !== '').sort();
             allProductTypes = Array.from(productTypeSet).filter(type => type !== '').sort();
-            allLocations = Array.from(locationSet).filter(location => location !== '').sort();
 
             lenderData.sort((a, b) => {
                 const nameA = a.LENDER || '';
@@ -925,16 +908,6 @@
                     `).join('');
             }
 
-            const locationDropdown = document.getElementById('locationDropdown');
-            if (locationDropdown) {
-                locationDropdown.innerHTML = allLocations
-                    .map(location => `
-                        <div class="multi-select-option" onclick="event.stopPropagation(); toggleLocation('${escapeHtml(location)}')">
-                            <input type="checkbox" id="location_${location.replace(/\s+/g, '_').replace(/,/g, '')}" onchange="event.stopPropagation(); toggleLocation('${escapeHtml(location)}')">
-                            <label for="location_${location.replace(/\s+/g, '_').replace(/,/g, '')}">${escapeHtml(location)}</label>
-                        </div>
-                    `).join('');
-            }
 
             document.addEventListener('click', function(e) {
                 document.querySelectorAll('.multi-select').forEach(multiSelect => {
@@ -1026,20 +999,6 @@
             applyFilters();
         }
 
-        function toggleLocation(location) {
-            const checkbox = document.getElementById(`location_${location.replace(/\s+/g, '_').replace(/,/g, '')}`);
-            
-            if (selectedLocations.includes(location)) {
-                selectedLocations = selectedLocations.filter(l => l !== location);
-                if (checkbox) checkbox.checked = false;
-            } else {
-                selectedLocations.push(location);
-                if (checkbox) checkbox.checked = true;
-            }
-            
-            updateMultiSelectDisplay('location', selectedLocations);
-            applyFilters();
-        }
 
         function selectSingleOption(type, value) {
             if (type === 'pgRequirement') {
@@ -1061,8 +1020,7 @@
         function updateMultiSelectDisplay(type, selectedItems) {
             const display = document.querySelector(`#${type}Select .multi-select-display`);
             const placeholder = type === 'lender' ? 'Select lender...' :
-                              type === 'productType' ? 'Select product type...' : 
-                              'Select location...';
+                              'Select product type...';
             
             if (selectedItems.length === 0) {
                 display.innerHTML = `<span class="multi-select-placeholder">${placeholder}</span>`;
@@ -1071,7 +1029,7 @@
                     .map(item => `
                         <span class="multi-select-tag">
                             ${escapeHtml(item)}
-                            <span class="remove" onclick="toggle${type === 'lender' ? 'Lender' : type === 'productType' ? 'ProductType' : 'Location'}('${escapeHtml(item)}')">&times;</span>
+                            <span class="remove" onclick="toggle${type === 'lender' ? 'Lender' : 'ProductType'}('${escapeHtml(item)}')">&times;</span>
                         </span>
                     `).join('');
             }
@@ -1096,13 +1054,11 @@
             
             selectedLenders = [];
             selectedProductTypes = [];
-            selectedLocations = [];
             selectedPgRequirement = '';
             selectedHomeownerRequirement = '';
             
             updateMultiSelectDisplay('lender', selectedLenders);
             updateMultiSelectDisplay('productType', selectedProductTypes);
-            updateMultiSelectDisplay('location', selectedLocations);
             updateSingleSelectDisplay('pgRequirement', '');
             updateSingleSelectDisplay('homeownerRequirement', '');
             
@@ -1138,14 +1094,6 @@
                             lenderProductTypes.includes(selectedType)
                         );
                         if (!hasMatchingProduct) return false;
-                    }
-                    
-                    if (selectedLocations.length > 0 && lender.LOCATION && lender.LOCATION.trim() !== '') {
-                        const lenderLocations = lender.LOCATION.split(', ').map(l => l.trim());
-                        const hasMatchingLocation = selectedLocations.some(selectedLocation => 
-                            lenderLocations.includes(selectedLocation)
-                        );
-                        if (!hasMatchingLocation) return false;
                     }
                     
                     if (selectedPgRequirement) {
