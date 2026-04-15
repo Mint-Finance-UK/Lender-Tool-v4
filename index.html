@@ -1241,7 +1241,7 @@
                                 <div style="margin-top: 0.25rem; text-align: left;">
                                     ${submissionLink}
                                 </div>
-                                ${lender.LAST_UPDATED && lender.LAST_UPDATED.trim() !== '' && lender.LAST_UPDATED.toLowerCase() !== 'true' && lender.LAST_UPDATED.toLowerCase() !== 'false' ? `<div style="margin-top: 0.25rem; font-size: 0.75rem; color: #6c757d;">Updated: ${escapeHtml(lender.LAST_UPDATED)}</div>` : ''}
+                                <div style="margin-top: 0.25rem; font-size: 0.75rem; color: #6c757d;">Updated: ${lender.LAST_UPDATED && lender.LAST_UPDATED.trim() !== '' && lender.LAST_UPDATED.toLowerCase() !== 'true' && lender.LAST_UPDATED.toLowerCase() !== 'false' ? escapeHtml(lender.LAST_UPDATED) : 'Not Specified'}</div>
                             </td>
                             <td>
                                 <div class="amount-range">
