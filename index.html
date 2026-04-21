@@ -615,11 +615,24 @@
                     warnings.push(`Row ${rowNum}: Product Type is missing`);
                 }
                 
-                const numericFields = ['Min Loan', 'Max Loan', 'Min Term', 'Max Term', 'Min Trading Months', 'Min Monthly Turnover', 'Monthly Interest From', 'Monthly Interest To'];
+                const numericFields = ['Min Loan', 'Max Loan', 'Min Term', 'Max Term', 'Min Trading Months', 'Min Monthly Turnover'];
                 numericFields.forEach(field => {
                     const value = row[field];
                     if (value !== '' && value !== null && value !== undefined) {
                         const numValue = Number(value);
+                        if (isNaN(numValue) || numValue < 0) {
+                            errors.push(`Row ${rowNum}: ${field} must be a valid positive number (found: "${value}")`);
+                        }
+                    }
+                });
+                
+                // Interest fields may contain % signs - strip before validating
+                const interestFields = ['Monthly Interest From', 'Monthly Interest To'];
+                interestFields.forEach(field => {
+                    const value = row[field];
+                    if (value !== '' && value !== null && value !== undefined) {
+                        const cleaned = value.toString().replace('%', '').trim();
+                        const numValue = Number(cleaned);
                         if (isNaN(numValue) || numValue < 0) {
                             errors.push(`Row ${rowNum}: ${field} must be a valid positive number (found: "${value}")`);
                         }
@@ -641,7 +654,7 @@
                 const booleanFields = ['Homeowner Required', 'Existing Lending Required', 'Mint Finance Panel'];
                 booleanFields.forEach(field => {
                     const value = row[field];
-                    if (value && !['Yes', 'No', 'TRUE', 'FALSE', true, false, ''].includes(value)) {
+                    if (value && !['yes', 'no', 'true', 'false', ''].includes(value.toString().toLowerCase()) && value !== true && value !== false) {
                         errors.push(`Row ${rowNum}: ${field} must be Yes/No or TRUE/FALSE (found: "${value}")`);
                     }
                 });
@@ -725,8 +738,10 @@
                     const minTradingIsBlank = (minTradingRaw === '' || minTradingRaw === null || minTradingRaw === undefined);
                     const minTurnoverRaw = row['Min Monthly Turnover'];
                     const minTurnoverIsBlank = (minTurnoverRaw === '' || minTurnoverRaw === null || minTurnoverRaw === undefined);
-                    const interestFrom = parseFloat(row['Monthly Interest From']) || 0;
-                    const interestTo = parseFloat(row['Monthly Interest To']) || 0;
+                    const interestFromRaw = parseFloat((row['Monthly Interest From'] || '').toString().replace('%', '')) || 0;
+                    const interestToRaw = parseFloat((row['Monthly Interest To'] || '').toString().replace('%', '')) || 0;
+                    const interestFrom = interestFromRaw < 1 ? Math.round(interestFromRaw * 10000) / 100 : interestFromRaw;
+                    const interestTo = interestToRaw < 1 ? Math.round(interestToRaw * 10000) / 100 : interestToRaw;
                     
                     const mintFinancePanel = (row['Mint Finance Panel'] === 'TRUE' || row['Mint Finance Panel'] === true);
                     
