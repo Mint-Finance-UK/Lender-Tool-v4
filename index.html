@@ -654,7 +654,7 @@
                 const booleanFields = ['Homeowner Required', 'Existing Lending Required', 'Mint Finance Panel'];
                 booleanFields.forEach(field => {
                     const value = row[field];
-                    if (value && !['yes', 'no', 'true', 'false', ''].includes(value.toString().toLowerCase()) && value !== true && value !== false) {
+                    if (value && !['yes', 'no', 'true', 'false', 'not stated', 'case-by-case', 'n/a', ''].includes(value.toString().toLowerCase()) && value !== true && value !== false) {
                         errors.push(`Row ${rowNum}: ${field} must be Yes/No or TRUE/FALSE (found: "${value}")`);
                     }
                 });
