@@ -600,6 +600,33 @@
         let selectedHomeownerRequirement = '';
         let domElements = {};
 
+        // ──────────────────────────────────────────────────────────────────
+        // NEW: Currency-tolerant numeric parser.
+        // Accepts: 10000, "10000", "£10,000", "£10,000.00", " 10,000 ", "",
+        // null, undefined, true/false (booleans). Returns NaN ONLY when the
+        // input genuinely cannot be interpreted as a number.
+        // ──────────────────────────────────────────────────────────────────
+        function parseNumericValue(value) {
+            if (value === null || value === undefined || value === '') return NaN;
+            if (typeof value === 'number') return value;
+            if (typeof value === 'boolean') return NaN;
+            // Strip £, $, €, commas, spaces, and stray quotes.
+            const cleaned = value.toString().replace(/[£$€,\s"']/g, '');
+            if (cleaned === '') return NaN;
+            const num = Number(cleaned);
+            return num;
+        }
+
+        // Helper: detect a row that is structurally empty (all values blank,
+        // null, or undefined). Catches Excel's comma-only padding rows that
+        // PapaParse doesn't strip via skipEmptyLines.
+        function isRowEffectivelyEmpty(row) {
+            if (!row || typeof row !== 'object') return true;
+            return Object.values(row).every(v =>
+                v === null || v === undefined || v.toString().trim() === ''
+            );
+        }
+
         function validateCSVData(csvRows) {
             const errors = [];
             const warnings = [];
@@ -607,11 +634,11 @@
             csvRows.forEach((row, index) => {
                 const rowNum = index + 2;
                 
-                if (!row['Lender'] || row['Lender'].trim() === '') {
+                if (!row['Lender'] || row['Lender'].toString().trim() === '') {
                     errors.push(`Row ${rowNum}: Lender name is required`);
                 }
                 
-                if (!row['Product Type'] || row['Product Type'].trim() === '') {
+                if (!row['Product Type'] || row['Product Type'].toString().trim() === '') {
                     warnings.push(`Row ${rowNum}: Product Type is missing`);
                 }
                 
@@ -619,7 +646,8 @@
                 numericFields.forEach(field => {
                     const value = row[field];
                     if (value !== '' && value !== null && value !== undefined) {
-                        const numValue = Number(value);
+                        // CHANGED: use parseNumericValue so "£10,000" is valid.
+                        const numValue = parseNumericValue(value);
                         if (isNaN(numValue) || numValue < 0) {
                             errors.push(`Row ${rowNum}: ${field} must be a valid positive number (found: "${value}")`);
                         }
@@ -627,14 +655,14 @@
                 });
                 
                 
-                const minLoan = Number(row['Min Loan']) || 0;
-                const maxLoan = Number(row['Max Loan']) || 0;
+                const minLoan = parseNumericValue(row['Min Loan']) || 0;
+                const maxLoan = parseNumericValue(row['Max Loan']) || 0;
                 if (minLoan > 0 && maxLoan > 0 && minLoan > maxLoan) {
                     errors.push(`Row ${rowNum}: Min Loan (${minLoan}) cannot be greater than Max Loan (${maxLoan})`);
                 }
                 
-                const minTerm = Number(row['Min Term']) || 0;
-                const maxTerm = Number(row['Max Term']) || 0;
+                const minTerm = parseNumericValue(row['Min Term']) || 0;
+                const maxTerm = parseNumericValue(row['Max Term']) || 0;
                 if (minTerm > 0 && maxTerm > 0 && minTerm > maxTerm) {
                     errors.push(`Row ${rowNum}: Min Term (${minTerm}) cannot be greater than Max Term (${maxTerm})`);
                 }
@@ -648,8 +676,8 @@
                 });
                 
                 const submission = row['Submission'];
-                if (submission && submission.trim() !== '') {
-                    const trimmedSubmission = submission.trim();
+                if (submission && submission.toString().trim() !== '') {
+                    const trimmedSubmission = submission.toString().trim();
                     if (!trimmedSubmission.includes('@') && !trimmedSubmission.startsWith('http')) {
                         warnings.push(`Row ${rowNum}: Submission should be an email address or URL (found: "${trimmedSubmission}")`);
                     }
@@ -673,7 +701,7 @@
                 
                 const parsed = Papa.parse(csvText, {
                     header: true,
-                    skipEmptyLines: true,
+                    skipEmptyLines: 'greedy',  // CHANGED: 'greedy' also strips lines that are just whitespace/commas
                     trimHeaders: true,
                     dynamicTyping: true,
                     transformHeader: function(header) {
@@ -685,7 +713,10 @@
                     console.warn('CSV parsing warnings:', parsed.errors);
                 }
                 
-                csvData = parsed.data;
+                // NEW: belt-and-braces filter for Excel comma-only padding rows
+                // that slip past 'greedy' (rows where every field is null/blank).
+                csvData = parsed.data.filter(row => !isRowEffectivelyEmpty(row));
+                
                 lenderData = convertCSVToInternalFormat(csvData);
                 filteredData = [...lenderData];
                 
@@ -716,18 +747,19 @@
             
             return csvRows.map((row, index) => {
                 try {
-                    const minLoan = Math.max(0, parseInt(row['Min Loan']) || 0);
-                    const maxLoan = Math.max(0, parseInt(row['Max Loan']) || 0);
-                    const minTerm = Math.max(0, parseInt(row['Min Term']) || 0);
-                    const maxTerm = Math.max(0, parseInt(row['Max Term']) || 0);
-                    const minTrading = Math.max(0, parseInt(row['Min Trading Months']) || 0);
-                    const minTurnover = Math.max(0, parseInt(row['Min Monthly Turnover']) || 0);
+                    // CHANGED: parse via parseNumericValue so "£10,000" → 10000.
+                    const minLoan = Math.max(0, parseNumericValue(row['Min Loan']) || 0);
+                    const maxLoan = Math.max(0, parseNumericValue(row['Max Loan']) || 0);
+                    const minTerm = Math.max(0, parseNumericValue(row['Min Term']) || 0);
+                    const maxTerm = Math.max(0, parseNumericValue(row['Max Term']) || 0);
+                    const minTrading = Math.max(0, parseNumericValue(row['Min Trading Months']) || 0);
+                    const minTurnover = Math.max(0, parseNumericValue(row['Min Monthly Turnover']) || 0);
                     const minTradingRaw = row['Min Trading Months'];
                     const minTradingIsBlank = (minTradingRaw === '' || minTradingRaw === null || minTradingRaw === undefined);
                     const minTurnoverRaw = row['Min Monthly Turnover'];
                     const minTurnoverIsBlank = (minTurnoverRaw === '' || minTurnoverRaw === null || minTurnoverRaw === undefined);
-                    const interestFrom = parseFloat((row['Monthly Interest From'] || '').toString()) || 0;
-                    const interestTo = parseFloat((row['Monthly Interest To'] || '').toString()) || 0;
+                    const interestFrom = parseNumericValue(row['Monthly Interest From']) || 0;
+                    const interestTo = parseNumericValue(row['Monthly Interest To']) || 0;
                     
                     const mintFinancePanel = (row['Mint Finance Panel'] === 'TRUE' || row['Mint Finance Panel'] === true);
                     
@@ -798,10 +830,10 @@
             const indicator = document.getElementById('loadingIndicator');
             if (indicator) {
                 indicator.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="text-align: center; padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 80vw; max-height: 80vh; overflow: auto;">
                         <h3 style="color: #dc3545; margin-bottom: 1rem;">Error Loading Data</h3>
                         <p style="color: #6c757d; margin-bottom: 1rem;">Unable to load lender information:</p>
-                        <p style="color: #dc3545; font-family: monospace; font-size: 0.9rem; margin-bottom: 1.5rem;">${errorMessage}</p>
+                        <p style="color: #dc3545; font-family: monospace; font-size: 0.9rem; margin-bottom: 1.5rem; white-space: pre-wrap; text-align: left;">${errorMessage}</p>
                         <button onclick="location.reload()" style="
                             padding: 0.5rem 1rem; 
                             background: #007bff; 
