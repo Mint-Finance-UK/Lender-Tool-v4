@@ -883,8 +883,8 @@
                 }
                 
                 if (lender.PRODUCT_TYPE && lender.PRODUCT_TYPE.trim() !== '') {
-                    const types = lender.PRODUCT_TYPE.split(', ');
-                    types.forEach(type => productTypeSet.add(type.trim()));
+                    // Product Type is always a single value, so add it as-is.
+                    productTypeSet.add(lender.PRODUCT_TYPE.trim());
                 }
             });
 
@@ -1131,10 +1131,8 @@
                     if (monthlyTurnover !== null && (lender.MIN_TURNOVER_IS_BLANK || monthlyTurnover < lender.MIN_MONTHLY_TURNOVER)) return false;
                     
                     if (selectedProductTypes.length > 0 && lender.PRODUCT_TYPE && lender.PRODUCT_TYPE.trim() !== '') {
-                        const lenderProductTypes = lender.PRODUCT_TYPE.split(', ').map(t => t.trim());
-                        const hasMatchingProduct = selectedProductTypes.some(selectedType => 
-                            lenderProductTypes.includes(selectedType)
-                        );
+                        // Product Type is always a single value.
+                        const hasMatchingProduct = selectedProductTypes.includes(lender.PRODUCT_TYPE.trim());
                         if (!hasMatchingProduct) return false;
                     }
                     
@@ -1247,7 +1245,7 @@
                         criteriaItems.push('Location: Not Specified');
                     }
                     if (lender.ADDITIONAL_CRITERIA && lender.ADDITIONAL_CRITERIA.trim() !== '') {
-                        criteriaItems.push(...lender.ADDITIONAL_CRITERIA.split(',').map(criteria => 
+                        criteriaItems.push(...lender.ADDITIONAL_CRITERIA.split(';').map(criteria => 
                             escapeHtml(criteria.trim())
                         ).filter(c => c.length > 0));
                     }
@@ -1255,11 +1253,21 @@
                     const securityItems = [];
                     securityItems.push(`PG Required: ${lender.PG_REQ && lender.PG_REQ.trim() !== '' ? escapeHtml(lender.PG_REQ) : 'Not Specified'}`);
                     securityItems.push(`Homeowner Required: ${lender.HOMEOWNER_STATUS && lender.HOMEOWNER_STATUS.trim() !== '' ? escapeHtml(lender.HOMEOWNER_STATUS) : 'Not Specified'}`);
-                    securityItems.push(`Other Security: ${lender.OTHER_SECURITY && lender.OTHER_SECURITY.trim() !== '' ? escapeHtml(lender.OTHER_SECURITY) : 'Not Specified'}`);
+                    if (lender.OTHER_SECURITY && lender.OTHER_SECURITY.trim() !== '') {
+                        const otherSecurityParts = lender.OTHER_SECURITY.split(';').map(s => s.trim()).filter(s => s.length > 0);
+                        if (otherSecurityParts.length > 0) {
+                            securityItems.push(`Other Security: ${escapeHtml(otherSecurityParts[0])}`);
+                            for (let i = 1; i < otherSecurityParts.length; i++) {
+                                securityItems.push(escapeHtml(otherSecurityParts[i]));
+                            }
+                        }
+                    } else {
+                        securityItems.push('Other Security: Not Specified');
+                    }
                     
                     // USP items from Product USP field
                     const uspItems = lender.PRODUCT_USP && lender.PRODUCT_USP.trim() !== '' ? 
-                        lender.PRODUCT_USP.split(',').map(usp => 
+                        lender.PRODUCT_USP.split(';').map(usp => 
                             escapeHtml(usp.trim())
                         ).filter(u => u.length > 0) : [];
 
