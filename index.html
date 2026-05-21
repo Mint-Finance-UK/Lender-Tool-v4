@@ -610,8 +610,8 @@
             if (value === null || value === undefined || value === '') return NaN;
             if (typeof value === 'number') return value;
             if (typeof value === 'boolean') return NaN;
-            // Strip £, $, €, commas, spaces, and stray quotes.
-            const cleaned = value.toString().replace(/[£$€,\s"']/g, '');
+            // Strip £, $, €, %, commas, spaces, and stray quotes.
+            const cleaned = value.toString().replace(/[£$€%,\s"']/g, '');
             if (cleaned === '') return NaN;
             const num = Number(cleaned);
             return num;
